@@ -1,0 +1,25 @@
+project:
+  type: website
+  output-dir: docs
+
+
+website:
+  title: "Monitoreo plataformas digitales"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+
+format:
+  html:
+    theme: xelatex
+    css: styles.css
+    toc: true
+    number-sections: true
+    toc_depth: 2
+    toc_float: true
+    lang: es
+    self-contained: true
+
+editor: visual
+

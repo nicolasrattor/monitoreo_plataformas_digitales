@@ -1,0 +1,1021 @@
+---
+title: "Monitoreo mensual del empleo de plataformas digitales"
+subtitle: "Proyecto < Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales >"
+author: "Nicolás Ratto"
+date: today
+format: 
+  html:
+    toc: true
+    number-sections: true
+    toc_depth: 2
+    toc_float: true
+    lang: es
+    self-contained: true
+  pdf:
+    documentclass: report
+    toc: true
+    number-sections: true
+    lang: es
+    pdf-engine: xelatex
+    fontsize: 11pt
+    logo: logo.png
+    geometry:
+      - margin=2.5cm
+    include-in-header:
+      text: |
+        \usepackage{fontspec}
+        \usepackage{graphicx}
+        \usepackage{titling}
+        \pretitle{%
+          \begin{center}
+          \includegraphics[width=2cm]{logo.png}\\[1cm]
+          \LARGE
+        }
+        \posttitle{\end{center}}
+execute:
+  echo: false
+  warning: false
+  message: false
+editor: visual
+---
+
+# Introducción
+
+El presente documento consiste en un monitoreo mensual del empleo en el sector de las plataformas digitales de Chile, en base a la Encuesta Nacional de Empleo del Instituto Nacional de Estadísticas (INE). Esto, para el proyecto *Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales*, en cooperación con la Fundación Friedrich Ebert en Chile.
+
+Todos los datos son públicos y fueron descargados desde [el sitio web del INE](https://www.ine.gob.cl/estadisticas-por-tema/mercado-laboral). La última actualización de los datos corresponde al trimestre Marzo - Abril - Mayo de 2026 (MAM 2026).
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+
+options(scipen = 999)
+
+## cargar paquetes
+
+library(haven)
+library(sjlabelled)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(magrittr)
+library(scales)
+library(knitr)
+library(arrow)
+
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+
+if (!dir.exists("output/graficos")) {
+  dir.create("output/graficos")
+}
+
+if (!dir.exists("output/tablas")) {
+  dir.create("output/tablas")
+}
+
+```
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+## Carga bases de datos
+ds <- open_dataset("../../../../../PROSPECTIVA SpA/ene_empleo_microdatos/output/data")
+
+## Serie de plataformas
+pd <- ds %>% 
+  filter(ano_trimestre>=2020) %>% 
+  select(periodo, fact_cal, plataformas_digitales) %>%
+  filter(plataformas_digitales == 1) %>%
+  group_by(periodo) %>%
+  summarise(plataformas = sum(fact_cal, na.rm = TRUE)) %>%
+  arrange(periodo) %>%
+  collect()
+
+# Serie de ocupados
+ocupados <- ds %>% 
+    filter(periodo>="2020-02-01") %>% 
+  filter(activ == 1) %>%
+  group_by(periodo) %>%
+  summarise(ocupados_totales = sum(fact_cal, na.rm = TRUE)) %>%
+  arrange(periodo) %>%
+  collect()
+
+pd <- merge(pd,ocupados,by="periodo")
+
+```
+
+# Plataformas digitales
+
+A todas las personas que reportan estar ocupadas en la semana de referencia, el INE les consulta si realizaron su trabajo a través de una plataforma digital de servicio: *¿Su trabajo lo realiza a través de una aplicación móvil o plataforma web?*. Si la respuesta es afirmativa, la persona debe indicar el nombre de la plataforma. Así, se puede obtener un listado con las plataformas digitales más recurrentes. La siguiente tabla muestra las 10 más nombradas desde el 2020 a la fecha. La de mayor prevalencia es *Instagram*, que en promedio cada mes es utilizada por más de 50.000 personas para realizar su trabajo. Luego viene *Facebook*, *Whatsapp* y *Uber*, con más de 30.000 personas cada una. Con una mucho menor prevalencia luego viene *Marketplace* de *Facebook*, *Uber Eats* y *PedidosYa*.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-empresas-todas
+#| tbl-cap: "Principales empresas de plataformas reportadas (promedio ocupados mensuales)"
+
+# Detalle
+
+aux <- ds %>% 
+  filter(periodo>="2020-02-01") %>% 
+  group_by(periodo) %>%  
+  summarise(n=n())%>% 
+  collect()
+
+nombres_plataformas <- ds %>% 
+  filter(periodo>="2020-02-01") %>% 
+  group_by(pd_especifique) %>%
+  summarise(ocupados_acumulado = sum(fact_cal, na.rm = TRUE)) %>%
+  mutate(ocupados_acumulado=round(ocupados_acumulado/nrow(aux))) %>% 
+  arrange(-ocupados_acumulado) %>% 
+  collect()
+
+nombres_plataformas<-nombres_plataformas %>% filter(pd_especifique!="")
+
+head(nombres_plataformas,10) %>% kable( col.names = c("Plataformas","Ocupados mensualizado"),
+        format.args = list(big.mark = ".", scientific = FALSE))
+
+
+```
+
+Quienes declaran realizar su trabajo a través de una plataforma digital sumaron más de `r format(round(last(pd$plataformas)), big.mark = ".", scientific = FALSE)` personas el último trimestre móvil reportado por el INE. Las personas ocupadas que utilizan alguna de estas plataformas viene aumentando continuamente desde que existe registro, desde el año 2020. Respecto de hace una año, los ocupados de plataformas aumentaron en `r format(round(last(pd$plataformas))-round(last(lag(pd$plataformas,12))), big.mark = ".", scientific = FALSE)` personas. Una reciente noticia de El Mercurio hace referencia a este dato[^1].
+
+[^1]: Se adjunta enlace a publicación de Linkedin, que permite acceso libre: <https://www.linkedin.com/posts/economia-y-negocios-el-mercurio_empleo-proviene-de-las-redes-sociales-activity-7482399692006297600-aGB3?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAAB1sR9YB5hHhMBWKXcb76g4nr7wRjdwV7yI>
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: fig-plataformas-serie1
+#| fig-cap: " "
+
+
+ggplot(pd, aes(x = periodo, y = plataformas)) +
+  geom_line(linewidth = 1, color = "#2C3E50") +
+  geom_point(size = 2, color = "#2C3E50") +
+  scale_y_continuous(
+  breaks = seq(0, max(pd$plataformas, na.rm = TRUE) + 50000, by = 50000),
+  labels = label_number(big.mark = ".", decimal.mark = ",")
+) + 
+  labs(
+    title = "Ocupados en plataformas digitales (2020-2026)",
+    subtitle = "Solo la primera ocupación",
+    x = NULL,
+    y = "Número de personas",
+    caption = "Fuente: Elaboración propia en base a ENE"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "gray40"),
+    axis.text = element_text(color = "gray30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+```
+
+# Plataformas digitales georreferenciadas (Ley 21.431)
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+## quitar plataformas de venta online y redes sociales
+nombres_plataformas_para_filtrar <- subset(nombres_plataformas,
+   !(pd_especifique %in% 
+       c("INSTAGRAM",
+         "FACEBOOK",
+         "WHATSAPP",
+         "FACEBOOK INSTAGRAM",
+         "FACEBOOK MARKETPLACE",
+         "INSTAGRAM FACEBOOK",
+         "FACEBOOK WHATSAPP",
+         "WHATSAPP FACEBOOK",
+         "WHATSAPP FACEBOOK INSTAGRAM",
+         "INSTAGRAM FACEBOOK WHATSAPP",
+         "INSTAGRAM WHATSAPP",
+         "MARKETPLACE",
+         "FACEBOOK INSTAGRAM WHATSAPP",
+         "WHATSAPP INSTAGRAM",
+         "WHATSAPP INSTAGRAM FACEBOOK",
+         "FACEBOOK MARKETPLACE INSTAGRAM",
+              "TIKTOK",
+              "FACEBOOK WHATSAPP INSTAGRAM",
+              "INSTAGRAM TIKTOK",
+              "FACEBOOK INSTAGRAM TIKTOK",
+              "MARKETPLACE FACEBOOK",
+              "MARKETPLACE INSTAGRAM",
+              "INSTAGRAM WHATSAPP FACEBOOK",
+              "INSTAGRAM MARKETPLACE",
+              "TELEGRAM",
+         "FACEBOOK MARKETPLACE WHATSAPP",
+               "FACEBOOK MARKETPLACE INSTAGRAM WHATSAPP",
+                    "INSTAGRAM FACEBOOK TIKTOK",
+                          "WATTASPP INSTAGRAM",
+               "FACEBOOK WHATSAPP INSTAGRAM TIKTOK",
+               "TIKTOK FACEBOOK INSTAGRAM WHATSAPP",
+              "FACEBOOK TIKTOK INSTAGRAM",
+             "FACEBOOK INSTAGRAM MARKETPLACE",
+               "FACEBOOK TIKTOK",
+         "WHATSAPP FACEBOOK YAPO",
+             "INSTAGRAM FACEBOOK WHATSAPP TIKTOK",
+                 "WHATSAPP TIKTOK FACEBOOK",
+              "TWITTER INSTAGRAM",
+                "FACEBOOK MARKETPLACE INSTAGRAM WHATSAPP FACEBOOK",
+               "INSTAGRAM MUNICIPALIDAD DE CONDES",
+              "INSTAGRAMWSP")))
+
+pd2 <- ds %>% 
+  filter(periodo>="2020-02-01" & plataformas_digitales == 1 ) %>% 
+  filter(pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>% 
+  group_by(periodo) %>%
+  summarise(ocupados = sum(fact_cal, na.rm = TRUE)) %>%
+  collect()
+
+pd2 <- pd2 %>% arrange(-desc(periodo))
+
+tabla_plat <- head(nombres_plataformas_para_filtrar,10) %>% 
+  kable(caption = "Principales empresas de plataformas reportadas, sin redes sociales", col.names = c("Plataformas","Ocupados mensualizado"),
+        format.args = list(big.mark = ".", scientific = FALSE))
+
+graf_redes <- ggplot(pd2, aes(x = periodo, y = ocupados)) +
+  geom_line(linewidth = 1.2, color = "#2C3E50") +
+  geom_point(size = 2.5, color = "#2C3E50") +
+  
+  scale_y_continuous(labels = label_number(big.mark = ".", decimal.mark = ",")) +
+  
+  labs(
+    title = "Ocupados en plataformas digitales, sin redes sociales (2020-2026)",
+    subtitle = "Solo primera ocupación.",
+    x = NULL,
+    y = "Número de personas",
+    caption = "Fuente: Elaboración propia en base a ENE"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(color = "gray40"),
+    axis.text = element_text(color = "gray30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+```
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-empresas-ley21431
+#| tbl-cap: "Principales empresas de plataformas reportadas, Ley 21431"
+
+## quitar plataformas de arriendo dptos y streaming
+nombres_plataformas_para_filtrar <- subset(nombres_plataformas_para_filtrar,
+                                           !(pd_especifique %in% 
+                                               c("YOUTUBE",
+                                                 "AIRBNB",
+                                                 "ONLYFANS",
+                                                 "BOOKING",
+                                                 "WHATSAPP YOUTUBE",
+                                                 "TWITCH")))
+
+pd_ley21431 <- ds %>% 
+  filter(periodo>="2020-02-01" & plataformas_digitales == 1 ) %>% 
+  filter(pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>% 
+  group_by(periodo) %>%
+  summarise(ocupados = sum(fact_cal, na.rm = TRUE)) %>%
+  collect()
+
+pd_ley21431 <- pd_ley21431 %>% arrange(-desc(periodo))
+
+head(nombres_plataformas_para_filtrar,10) %>% kable(col.names = c("Plataformas","Ocupados mensualizado"),
+        format.args = list(big.mark = ".", scientific = FALSE))
+
+```
+
+Más allá de la relevancia de seguir el empleo de quienes utilizan plataformas digitales, sin importar su tipo, podemos filtrar las empresas de plataformas digitales para quedarnos con un subconjunto de interés. En este caso, las plataformas reguladas por la Ley 21.431, como *Uber* o *PedidosYa*, que intermedian el trabajo georreferenciado. Para esto, quitamos a las plataformas de redes sociales, como *Instagram* y *Facebook*, así como a las plataformas de creación y difusión de contenido, como *Youtube* y *OnlyFans*. En el último trimestre registrado, estos trabajadores alcanzaron las `r format(round(last(pd_ley21431$ocupados)), big.mark = ".", scientific = FALSE)` personas (solo considerando quienes se ocupan en plataformas digitales reguladas por la Ley 21.431 como primera ocupación). En el último año, estos trabajaron disminuyeron en `r format(round(last(pd_ley21431$ocupados))-round(last(lag(pd_ley21431$ocupados,12))), big.mark = ".", scientific = FALSE)` personas.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: fig-plataformas-serie2
+#| fig-cap: " "
+
+
+ggplot(pd_ley21431, aes(x = periodo, y = ocupados)) +
+  geom_line(linewidth = 1, color = "#2C3E50") +
+  geom_point(size = 2, color = "#2C3E50") +
+  
+  scale_y_continuous(labels = label_number(big.mark = ".", decimal.mark = ",")) +
+  
+  labs(
+    title = "Ocupados en plataformas digitales (2020-2026)",
+    subtitle = "Solo primera ocupación. Reguladas por Ley 21.431",
+    x = NULL,
+    y = "Número de personas",
+    caption = "Fuente: Elaboración propia en base a ENE"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "gray40"),
+    axis.text = element_text(color = "gray30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+ggsave(
+  filename = "output/graficos/grafico_ocupados_ley21431.png",
+  plot = last_plot(),
+  width = 13.33,
+  height = 7.5,
+  units = "in",
+  dpi = 300
+)
+
+
+```
+
+En el siguiente gráfico se puede comparar la evolución de la serie general de trabajadores de plataformas digitales (línea negra) y la serie particular de trabajadores de plataformas digitales regulados por la Ley 21.431 (línea roja), incluida en la primera serie general.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+## gráfica conjunta
+
+pd <- pd %>% select(periodo,plataformas) %>% mutate(tipo="todas") %>% 
+  rename(ocupados=plataformas)
+pd_ley21431 <- pd_ley21431 %>% select(periodo,ocupados) %>% mutate(tipo="ley21431")
+
+pd_ley21431 <- bind_rows(pd,pd_ley21431)
+
+
+```
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+## Porcentajes
+
+pd_porcentajes <- cbind(pd_ley21431,
+rbind(ocupados,ocupados)[,2]
+)
+
+pd_porcentajes <- pd_porcentajes %>% mutate(porcentaje=round(ocupados/ocupados_totales*100,2))
+
+#pd_porcentajes %>% filter(tipo == "ley21431" & year(periodo) == 2026) %>% 
+#  summarise(mean(porcentaje))
+
+```
+
+No solo han aumentado en número, los trabajadores de plataformas digitales también han aumentado respecto del total de personas ocupadas. Los trabajadores de plataformas digitales pasaron de representar un 2,13% de los ocupados en 2022 a un 3,48% en 2025 y un 3,66% en lo que va de 2026. Los trabajadores de plataformas regulados por la Ley 21.431 pasaron de ser un 0,56% de los ocupados en 2022 a un 0,80% en 2025. En la última medida disponible representan un `r last(pd_porcentajes$porcentaje)`% de los ocupados.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: fig-plataformas-serie3
+#| fig-cap: " "
+#| fig-pos: "H"
+
+
+ggplot(pd_porcentajes, aes(x = periodo, y = porcentaje, 
+                           color = tipo, group = tipo)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  
+  scale_color_manual(values = c("todas" = "#2C3E50", "ley21431" = "#E74C3C")) +
+  
+  scale_y_continuous(labels = label_percent(accuracy = 0.1, decimal.mark = ",", scale = 1)) + 
+  
+  
+  labs(
+    title = "Porcentaje de los ocupados en plataformas digitales (2020-2026)",
+    subtitle = "Solo primera ocupación. Todas y Ley 21.431.",
+    x = NULL,
+    y = "Porcentaje",
+    color = NULL,
+    caption = "Fuente: Elaboración propia en base a ENE"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "gray40"),
+    axis.text = element_text(color = "gray30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+ggsave(
+  filename = "output/graficos/grafico_ocupados_porcentaje.png",
+  plot = last_plot(),
+  width = 13.33,
+  height = 7.5,
+  units = "in",
+  dpi = 300
+)
+
+
+```
+
+## Características de trabajadores y su ocupación
+
+### Sexo
+
+La distribución por sexo entre 2020 y 2026 evidencia una marcada masculinización de la fuerza laboral en plataformas digitales reguladas por la Ley 21.431: los hombres representan en promedio un 85,01% de los trabajadores, frente a un 14,99% de mujeres (@tbl-sexo).
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-sexo
+#| tbl-cap: "Promedio de distribución por sexo (2020-2026)"
+
+nombres <- ds %>% names()
+
+sexo <- ds %>% 
+  filter(periodo>="2020-02-01" &  
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo, sexo) %>% 
+  summarise(
+    ocupados = sum(fact_cal, na.rm = TRUE)
+  ) %>% 
+  mutate(percent=round(ocupados/sum(ocupados)*100,1)) %>% 
+  collect()
+
+sexo <- sexo %>% arrange(-desc(periodo))
+
+sexo %>% group_by(sexo) %>% summarise(percent=mean(percent)) %>% 
+  mutate(sexo= c("hombre","mujer"),
+         percent=round(percent,2)) %>% 
+  kable()
+
+
+
+```
+
+### Informalidad
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+formalidad <- ds %>% 
+  filter(periodo>="2020-02-01" &  
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo, ocup_form) %>% 
+  summarise(
+    ocupados = sum(fact_cal, na.rm = TRUE)
+  ) %>% 
+  mutate(percent=round(ocupados/sum(ocupados)*100,2)) %>% 
+  collect()
+
+formalidad <- formalidad %>% arrange(-desc(periodo))
+
+
+
+```
+
+La informalidad en la primera ocupación de trabajadores de plataformas digitales muestra una tendencia decreciente con importantes fluctuaciones a lo largo del período (@fig-informalidad). Entre 2020 y 2021, la informalidad se mantuvo consistentemente alta, oscilando entre 70% y 89%, con su punto máximo en diciembre de 2021 (81,49%). A partir de 2022 comienza una leve tendencia a la baja, aunque con vaivenes trimestrales, manteniéndose mayormente entre 70% y 84%.
+
+El quiebre más marcado se observa desde mediados de 2024: la informalidad cae de niveles cercanos al 69% (enero 2024) a mínimos históricos de 56,29% (septiembre 2025), coincidiendo con la entrada en régimen de las resoluciones del Servicio de Impuestos Internos (SII) que hacen operativos algunos aspectos de la Ley 21.431. Este período (2024-2025) concentra la mayor parte de la reducción observada en toda la serie. Sin embargo, hacia el cierre de la serie disponible (abril 2026), se aprecia un repunte a `r last(formalidad$percent)`%, lo que sugiere que la formalización no ha sido un proceso lineal ni necesariamente consolidado, y amerita monitoreo continuo (véase la @tbl-informalidad).
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: fig-informalidad
+#| fig-cap: " "
+#| fig-pos: "H"
+
+
+formalidad %>%
+  ggplot(aes(x = periodo, y = percent, color = as.factor(ocup_form),
+             group = as.factor(ocup_form))) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(
+    labels = label_percent(scale = 1, suffix = "%"),
+    limits = c(0, 100)
+  ) +
+  scale_color_manual(
+    values = c("1" = "#1D9E75", "2" = "#D85A30"),
+    labels = c("1" = "Formal", "2" = "Informal")
+  ) +
+  
+  labs(
+    title = "Ocupados en plataformas digitales Ley 21.431 (2020-2026)",
+    subtitle = "Según formalidad en primera ocupación",
+    x = NULL,
+    y = "Porcentaje",
+    color = NULL,
+    caption = "Fuente: Elaboración propia en base a ENE"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "gray40"),
+    axis.text = element_text(color = "gray30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+
+```
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-informalidad
+#| tbl-cap: "Distribución por formalidad en último periodo con datos"
+
+formalidad %>% 
+  tail(2) %>% 
+  mutate(ocup_form=c("Formales","Informales"),
+         ocupados=round(ocupados)) %>% 
+  kable(format.args = list(big.mark = ".", scientific = FALSE))
+```
+
+### Región
+
+La distribución regional de trabajadores de plataformas digitales en los últimos 12 meses muestra una fuerte concentración metropolitana (Tabla 5): la Región Metropolitana concentra el 60,11% del total. Fuera de la RM, solo dos regiones superan el 5%: Valparaíso (8,79%) y Biobío (6,35%). Le sigue Coquimbo (4,83%). Un tercer grupo de regiones se ubica entre 2% y 3,6%: Maule (3,55%), Los Lagos (2,86%), La Araucanía (2,15%), Tarapacá (2,08%) y Antofagasta (2,04%). El resto de las regiones presenta participaciones marginales, todas bajo el 1,5%: Ñuble (1,18%), Los Ríos (1,17%), Arica y Parinacota (1,41%), O'Higgins (1,49%), Magallanes (0,95%), Atacama (0,93%) y Aysén (0,15%).
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-region
+#| tbl-cap: "Promedio de distribución por región últimos 12 meses"
+
+region <- ds %>% 
+  filter(periodo>="2025-03-01" &  
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo, region) %>% 
+  summarise(
+    ocupados = sum(fact_cal, na.rm = TRUE)
+  ) %>% 
+  mutate(percent=round(ocupados/sum(ocupados)*100,2)) %>% 
+  collect()
+
+region %>% group_by(region) %>% summarise(percent=mean(percent)) %>% 
+  mutate(percent=round(percent,2),
+         region=c(
+   "  1           Tarapacá",
+   "  2        Antofagasta",
+   "  3            Atacama",
+   "  4           Coquimbo",
+   "  5         Valparaíso",
+   "  6          O'Higgins",
+   "  7              Maule",
+   "  8             Biobío",
+   "  9       La Araucanía",
+   " 10          Los Lagos",
+   " 11              Aysén",
+   " 12         Magallanes",
+   " 13      Metropolitana",
+   " 14           Los Ríos",
+   " 15 Arica y Parinacota",
+   " 16              Ñuble"
+         )) %>% 
+  kable()
+
+```
+
+### Nacionalidad
+
+La distribución por nacionalidad de trabajadores de plataformas digitales en el período 2025-2026 muestra que la nacionalidad chilena representa el 63,87% del total, seguida por Venezuela (25,23%) y Colombia (5,12%). Estas tres nacionalidades en conjunto representan el 94,22% de los trabajadores de plataformas digitales en el período analizado. Las otras nacionalidades no se presentan en @tbl-nacionalidad. En comparación con el período 2022-2023, la participación chilena aumentó de 58,71% a 63,87% y la colombiana aumentó de 3,69% a 5,12%, mientras que la participación venezolana disminuyó de 34,47% a 25,23%.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-nacionalidad
+#| tbl-cap: "Promedio de distribución por nacionalidad últimos 12 meses. 3 principales"
+
+nacionalidad <- ds %>% 
+  filter(periodo>="2025-03-01" &  
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo, nacionalidad) %>% 
+  summarise(
+    ocupados = sum(fact_cal, na.rm = TRUE)
+  ) %>% 
+  mutate(percent=round(ocupados/sum(ocupados)*100,2)) %>% 
+  collect()
+
+tab2025 <- nacionalidad %>% group_by(nacionalidad) %>% 
+  summarise(percent=mean(percent)) %>% 
+  arrange(-percent) %>% 
+  head(3) %>% 
+  mutate(nacionalidad=c("Chilena (152)",
+                        "Venezuela (862)",
+                        "Colombia (170)"),
+         percent=round(percent,2))
+
+nacionalidad_2022 <- ds %>% 
+  filter(periodo>="2022-03-01" &  periodo<="2024-03-01" &
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo, nacionalidad) %>% 
+  summarise(
+    ocupados = sum(fact_cal, na.rm = TRUE)
+  ) %>% 
+  mutate(percent=round(ocupados/sum(ocupados)*100,2)) %>% 
+  collect()
+
+tab2022<-nacionalidad_2022 %>% group_by(nacionalidad) %>% summarise(percent=mean(percent)) %>%
+  arrange(-percent) %>% 
+  head(3) %>% 
+  mutate(nacionalidad=c("Chilena (152)",
+                        "Venezuela (862)",
+                        "Colombia (170)"),
+         percent=round(percent,2))
+
+merge(tab2022,tab2025,by="nacionalidad") %>% kable(col.names = c("nacionalidad","2022-2023","2025-2026"))
+
+```
+
+### Edad
+
+La distribución por edad de trabajadores de plataformas digitales en los últimos 12 meses muestra una concentración en edades adultas jóvenes e intermedias (Tabla 7). El tramo de 30 a 34 años presenta la mayor participación (23,6%), seguido por 35 a 39 años (19,3%) y 25 a 29 años (14,1%). Estos tres tramos concentran en conjunto el 56,9% del total.
+
+Los tramos etarios extremos presentan las menores participaciones: 15 a 19 años (1,2%), 65 a 69 años (0,7%) y 70 años o más (1,2%). El tramo de 20 a 24 años registra un 5,2%.
+
+Considerando la distribución acumulada, el 63,4% de los trabajadores tiene entre 15 y 39 años, y el 89,0% tiene 54 años o menos.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-resumen-indicadores
+#| tbl-cap: "Promedio de distribución por edad últimos 12 meses"
+
+edad <- ds %>% 
+  filter(periodo>="2025-03-01" &  
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo, tramo_edad) %>% 
+  summarise(
+    ocupados = sum(fact_cal, na.rm = TRUE)
+  ) %>% 
+  mutate(percent=round(ocupados/sum(ocupados)*100,2)) %>% 
+  collect()
+
+edad %>% 
+  group_by(tramo_edad) %>% 
+  summarise(percent=round(mean(percent),1)) %>% 
+    mutate(percent_acum = cumsum(percent)) %>% 
+  mutate(tramo_edad=     
+   c("15 a 19 años",
+    "20 a 24 años",
+    "25 a 29 años",
+    "30 a 34 años",
+    "35 a 39 años",
+    "40 a 44 años",
+    "45 a 49 años",
+    "50 a 54 años",
+    "55 a 59 años",
+    "60 a 64 años",
+    "65 a 69 años",
+    "70 años o más")) %>% 
+  kable()
+
+
+```
+
+### Salarios en 2025
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+load("../input/esi_2025_personas.rdata")
+
+plataformas_nov2025 <- ds %>% 
+  filter(periodo=="2025-11-01" &  
+           plataformas_digitales == 1 & 
+            pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>% 
+  select(idrph,fact_cal) %>% 
+  collect()
+
+# sum(plataformas_nov2024$fact_cal)
+
+plataformas_nov2025 <- merge(plataformas_nov2025,base,by="idrph",all.x = TRUE)
+
+# sum(plataformas_nov2024$fact_cal.y)
+# sum(plataformas_nov2024$fact_cal_esi)
+
+
+tab1<-plataformas_nov2025 %>% 
+  summarise(
+    salario_promedio =round(weighted.mean(ing_t_p,fact_cal_esi, na.rm = TRUE)),
+    salario_mediano = round(matrixStats::weightedMedian(ing_t_p, 
+                                                  fact_cal_esi, 
+                                                  na.rm = TRUE))
+  ) 
+
+```
+
+La Encuesta Nacional de Empleo no incluye por si misma preguntas sobre salarios. La información debe ser complementada por la Encuesta Suplementaria de Ingresos, cuyos últimos datos publicados corresponden al trimestre móvil octubre - noviembre - diciembre de 2025. En ese trimestre se registraron `r format(round(sum(plataformas_nov2025$fact_cal.x)), big.mark = ".", scientific = FALSE)` trabajadores de plataformas digitales regulados por la Ley 21.431 (ocupando factores de expansión de la ESI), que corresponden a `r format(nrow(plataformas_nov2025), big.mark = ".", scientific = FALSE)` personas en la muestra. El ingreso mensual promedio que estos trabajadores recibieron por su ocupación principal fue de \$`r format(tab1[1,1], big.mark = ".", scientific = FALSE)`. La mediana salarial fue de \$`r format(tab1[1,2], big.mark = ".", scientific = FALSE)`, lo que indica que la mitad de los trabajadores recibió ese monto o menos.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-salarios
+#| tbl-cap: "Ingreso del trabajo promedio y mediano en 2025 para los trabajadores de plataformas"
+
+tab1 %>% 
+  mutate(across(everything(), ~ paste0("$", format(round(.x), big.mark = ".", scientific = FALSE)))) %>% 
+  kable()
+
+plataformas_nov2025 <- plataformas_nov2025 %>% 
+  mutate(horas_mes = d4_horas*d4_dias,
+         itp_hora = ing_t_p/horas_mes) 
+
+tab2<-plataformas_nov2025 %>% 
+  summarise(
+    
+    horas = round(weighted.mean(horas_mes, fact_cal.y, na.rm = TRUE),1),
+    
+    ingreso_horas = round(weighted.mean(itp_hora, 
+                                                  fact_cal_esi, 
+                                                  na.rm = TRUE))
+    
+  ) 
+
+```
+
+En términos agregados, las dos medidas de ingresos del trabajo superaron el ingreso mínimo mensual de ese momento, \$529.000 (\$430.077 neto, considerando los descuentos legales). Sin embargo, es necesario observar el ingreso por hora, cuyo valor de referencia mínimo neto sería de \$`r format(round(430077/176), big.mark = ".", scientific = FALSE)`. Con el recargo del 20% establecido por la Ley 21.431 el monto de referencia quedaría en \$`r format(round(430077/176*1.20), big.mark = ".", scientific = FALSE)`. En promedio, los trabajadores de plataformas digitales trabajaron `r format(tab2[1,1], big.mark = ".", scientific = FALSE)` horas en el trimestre de referencia, alcanzando un ingreso promedio por hora de \$`r format(tab2[1,2], big.mark = ".", scientific = FALSE)`, \$`r format(round(tab2[1,2]-(430077/176*1.20)), big.mark = ".", scientific = FALSE)` más que el mínimo legal.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+
+#tab2 %>% 
+#  kable(caption = "Ingreso del trabajo por hora para los trabajadores de plataformas")
+
+# con ic (interno)
+options(survey.lonely.psu = "certainty" ) 
+
+tab3 <- plataformas_nov2025 %>% 
+  srvyr::as_survey_design(ids = conglomerado, 
+                          strata = estrato, weights = fact_cal_esi) %>%
+  summarise(
+    horas = srvyr::survey_mean(horas_mes, na.rm = TRUE, vartype = "ci"),
+    ingreso_horas = srvyr::survey_mean(itp_hora, na.rm = TRUE, vartype = "ci")
+  )
+
+tab5 <- plataformas_nov2025 %>% 
+  srvyr::as_survey_design(ids = conglomerado, 
+                          strata = estrato, weights = fact_cal_esi) %>%
+  summarise(
+    horas = srvyr::survey_median(horas_mes, na.rm = TRUE, vartype = "ci"),
+    ingreso_horas = srvyr::survey_median(itp_hora, na.rm = TRUE, vartype = "ci")
+  )
+
+tab4<-plataformas_nov2025 %>% 
+    summarise(
+        total = n(),
+        no_na = sum(!is.na(itp_hora)),
+        na = sum(is.na(itp_hora))
+    )
+
+
+
+
+```
+
+Considérese que solamente `r tab4[1,2]` casos presentaron información válida para hacer la estimación, por lo que los intervalos de confianza de los estadísitcos son especialmente amplios. En el caso de la media, estos van desde los \$`r format(pull(round(tab3[1,5])), big.mark = ".", scientific = FALSE)` a los \$`r format(pull(round(tab3[1,6])), big.mark = ".", scientific = FALSE)`, mientras que en el caso de la mediana van desde los \$`r format(pull(round(tab5[1,5])), big.mark = ".", scientific = FALSE)` a los \$`r format(pull(round(tab5[1,6])), big.mark = ".", scientific = FALSE)`. Así, solo la estimación de los ingresos promedio por hora de los trabajadores de plataformas es estadísticamente superior a la establecida por ley, no así los ingresos medianos.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: fig-salarios
+#| fig-cap: " "
+
+min_neto_hora <- 430077/176
+min_legal_hora <- min_neto_hora * 1.20
+
+plot_ingreso_hora <- tibble(
+  categoria = "Ingreso por hora\n(trabajadores de plataformas)",
+  media   = pull(tab3[1, "ingreso_horas"]),
+  ci_low    = pull(tab3[1, "ingreso_horas_low"]),
+  ci_high   = pull(tab3[1, "ingreso_horas_upp"])
+)
+
+plot_ingreso_hora_mediana <- tibble(
+  categoria = "Ingreso por hora\n(trabajadores de plataformas)",
+  mediana   = pull(tab5[1, "ingreso_horas"]),
+  ci_low    = pull(tab5[1, "ingreso_horas_low"]),
+  ci_high   = pull(tab5[1, "ingreso_horas_upp"])
+)
+
+ggplot(plot_ingreso_hora, aes(x = categoria, y = media)) +
+  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
+                width = 0.15, linewidth = 0.9, color = "steelblue4") +
+  geom_point(aes(color = "Media"), size = 4) +
+  geom_errorbar(data = plot_ingreso_hora_mediana,
+                aes(y = mediana, ymin = ci_low, ymax = ci_high),
+                width = 0.15, linewidth = 0.9, color = "darkorange3",
+                position = position_nudge(x = 0.15)) +
+  geom_point(data = plot_ingreso_hora_mediana,
+             aes(y = mediana, color = "Mediana"), size = 4,
+             position = position_nudge(x = 0.15)) +
+  geom_hline(yintercept = min_legal_hora, linetype = "dashed", color = "firebrick") +
+  annotate("text",
+           x = 1.5, y = min_legal_hora,
+           label = paste0("Mínimo legal neto + 20% Ley 21.431: $",
+                           format(round(min_legal_hora), big.mark = ".")),
+           color = "firebrick", size = 3.5, hjust = 0) +
+  scale_color_manual(values = c("Media" = "steelblue4", "Mediana" = "darkorange3")) +
+  scale_y_continuous(
+    limits = c(0, 10000),
+    breaks = seq(0, 10000, 2000),
+    labels = scales::label_number(big.mark = ".", decimal.mark = ",")
+  ) +
+  labs(
+    title = "Ingreso por hora (media y mediana)",
+    subtitle = "Trabajadores de plataformas digitales Ley 21.431",
+    x = NULL,
+    y = "Ingreso por hora ($)",
+    color = NULL
+  ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 12),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(size = 9,angle = 90),
+    legend.position = "bottom"
+  )
+```
+
+# Plataformas digitales georreferenciadas como segunda ocupación
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+
+# library(haven)
+# ene_last <- read_dta("~/Library/CloudStorage/OneDrive-UniversidadCatólicadeChile/PROSPECTIVA SpA/minuta ENE/ene_empleo/input/ene-2026-03-fma.dta")
+# ene_last %>% select("plataformas_digitales", "pd_especifique",  "b19"   ,                "dependencia_segunda" , "sda_pd",   "sda_pd_especifique"  )
+
+segunda <- ds %>% 
+  filter(periodo>="2020-02-01" & sda_pd == 1 & plataformas_digitales!=1) %>% 
+  filter(sda_pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  group_by(periodo) %>%
+  summarise(ocupados = sum(fact_cal, na.rm = TRUE)) %>%
+  collect() 
+
+segunda <- segunda %>% arrange(-desc(periodo))
+
+nombres_2da <- ds %>% 
+  filter(periodo>="2020-02-01" & sda_pd == 1 & plataformas_digitales!=1) %>% 
+  group_by(sda_pd_especifique) %>%
+  summarise(ocupados_acumulado = sum(fact_cal, na.rm = TRUE)) %>%   filter(sda_pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>%
+  mutate(ocupados_acumulado=round(ocupados_acumulado/nrow(aux))) %>% 
+  arrange(-ocupados_acumulado) %>% 
+  collect()
+
+
+
+```
+
+En la @tbl-segunda-ocup se pueden observar las distintas plataformas digitales que los trabajadores que declaran tener una segunda ocupación reportan, entre las que destacan Uber y Uber Eats. En total, los ocupados que reportan tener una segunda ocupación en plataformas digitales reguladas por la Ley 21.431 promedian las 5.580 personas mensuales. Para el último trimestre con datos, estas personas suman `r format(last(round(segunda$ocupados)), big.mark = ".", scientific = FALSE)`.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-segunda-ocup
+#| tbl-cap: "Principales empresas de plataformas reportadas, Ley 21431 (segunda ocupación)"
+
+head(nombres_2da,10) %>% kable(col.names = c("Plataformas","Ocupados mensualizado"),
+        format.args = list(big.mark = ".", scientific = FALSE))
+
+segunda <- segunda %>% select(periodo,ocupados) %>% mutate(tipo="segunda_ley21431")
+
+pd_ley21431 <- bind_rows(pd_ley21431,segunda)
+
+segunda <- pd %>% select(periodo) %>% mutate(ocupados = (pd_ley21431[pd_ley21431$tipo == "ley21431", "ocupados"] + pd_ley21431[pd_ley21431$tipo == "segunda_ley21431", "ocupados"])) %>% mutate(tipo="ley21431_1y2")
+
+pd_ley21431 <- bind_rows(pd_ley21431,segunda)
+```
+
+A continuación se presentan tres series históricas de interés: trabajadores que en su primera ocupación reportan trabajar en plataformas digitales reguladas por la Ley 21.431 (serie roja); trabajadores que lo reportan en su segunda ocupación (serie negra); y la suma de trabajadores que lo reportan en su primera o segunda ocupación (serie morada). En el último trimestre con datos los trabajadores que reportan trabajar en plataformas digitales reguladas por la Ley 21.431 como primera o segunda ocupación alcanzan las `r format(last(round(pd_ley21431$ocupados)), big.mark = ".", scientific = FALSE)` personas.
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: fig-tres-series
+#| fig-cap: " "
+
+pd_ley21431 %>% 
+  filter(tipo!="todas") %>% 
+ggplot(aes(x = periodo, y = ocupados, color = tipo, group = tipo)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  
+  geom_text(
+    data = ~ .x %>% filter(periodo == max(periodo)),
+    aes(label = label_number(big.mark = ".", decimal.mark = ",")(ocupados)),
+    hjust = -0.2,
+    vjust = 0.5,
+    fontface = "bold",
+    size = 3.8,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(values = c("segunda_ley21431" = "#2C3E50", 
+                                "ley21431" = "#E74C3C",
+                                "ley21431_1y2"="#6A0DAD")) +
+  
+  scale_y_continuous(labels = label_number(big.mark = ".", decimal.mark = ","),
+          breaks = seq(0, max(pd_ley21431$ocupados, na.rm = TRUE), by = 10000)) +
+  
+  # amplío el eje x para que la etiqueta no se corte
+  scale_x_date(expand = expansion(mult = c(0.02, 0.12))) +
+  
+  labs(
+    title = "Ocupados en plataformas digitales Ley 21.431 (2020-2026)",
+    subtitle = "Primera y segunda ocupación",
+    x = NULL,
+    y = "Número de personas",
+    color = NULL,
+    caption = "Fuente: Elaboración propia en base a ENE"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "gray40"),
+    axis.text = element_text(color = "gray30"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+ggsave(
+  filename = "output/graficos/grafico_ocupados_ley21431_1_2.png",
+  plot = last_plot(),
+  width = 13.33,
+  height = 7.5,
+  units = "in",
+  dpi = 300
+)
+
+pd_ley21431 %>% tidyr::pivot_wider(names_from = tipo,values_from = ocupados) %>% writexl::write_xlsx("output/tablas/numero_plataformas.xlsx")
+
+```
+
+# Empresas de plataformas reguladas por la Ley 21.431 con mayor crecimiento últimos 4 años
+
+La Tabla 10 muestra la evolución de ocupados por empresa de plataformas digitales entre abril de 2022 y abril de 2026, ordenada por variación porcentual. El objetivo es identificar prospectivamente empresas relevantes y emergentes que requieran especial atención, así como conocer el aumento o perdida de relevancia cuantitativa de las empresas más reconocidas.
+
+Un primer grupo de empresas registra crecimiento desde cero ocupados en 2022 a valores positivos en 2026, entre las que destacan BOOSMAP (1.145), PICKER UP (592), MERCADOLIBRE INSTAGRAM (533) y AMIDA (404), entre otras con valores menores.
+
+Entre las empresas con presencia en ambos períodos, MERCADOLIBRE presenta la mayor variación porcentual positiva, pasando de 898 a 4.098 ocupados (+356,3%), seguida por DIDI (1.604 a 5.295; +230,1%), INDRIVER (947 a 2.504; +164,4%), UBER EATS (4.285 a 10.353; +141,6%), CABIFY (336 a 682; +103,0%), UBER (21.708 a 39.475; +81,8%) y DIDI UBER (200 a 307; +53,5%). En el otro extremo, PEDIDOS YA registra una caída de 4.497 a 4.203 ocupados (-6,5%) y RAPPI de 4.548 a 1.508 (-66,8%).
+
+Un grupo de empresas pasó de tener ocupados en 2022 a cero en 2026, con una variación de -100%: YAPO (188), BEAT (1.007), CORNERSHOP (7.131), SAWU (920), SHOPPER (458), TRANSVIP (795) y FOXER (2.641).
+
+\newpage
+
+```{r warning=FALSE, message=FALSE}
+#| code-fold: true
+#| code-summary: "Ver código"
+#| label: tbl-nuevas-plat
+#| tbl-cap: "Empresas de plataformas Ley 21431 con mayor crecimiento últimos 4 años"
+
+nuevas <- ds %>% 
+  filter(periodo=="2026-04-01" | periodo=="2022-04-01" & 
+           plataformas_digitales == 1 ) %>% 
+  filter(pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>% 
+  group_by(periodo,pd_especifique) %>%
+  summarise(ocupados = sum(fact_cal, na.rm = TRUE)) %>%
+  collect()
+
+nuevas <- nuevas %>% 
+  mutate(ocupados=round(ocupados)) %>% 
+  tidyr::pivot_wider(names_from = periodo, values_from = ocupados,
+                         values_fill = 0) 
+
+nuevas %>%  
+  mutate(variacion_porc=round((`2026-04-01` - `2022-04-01`)/`2022-04-01`*100,1),
+         `2026-04-01`=round(`2026-04-01`),
+         `2022-04-01`=round(`2022-04-01`)) %>% 
+  arrange(-variacion_porc, -`2026-04-01`) %>% 
+  kable()
+
+```

@@ -1,0 +1,8 @@
+---
+title: "Sobre el documento"
+---
+
+El presente documento consiste en un monitoreo mensual del empleo en el sector de las plataformas digitales de Chile, en base a la Encuesta Nacional de Empleo del Instituto Nacional de Estadísticas (INE). Esto, para el proyecto *Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales*, en cooperación con la Fundación Friedrich Ebert en Chile.
+
+Todos los datos son públicos y fueron descargados desde [el sitio web del INE](https://www.ine.gob.cl/estadisticas-por-tema/mercado-laboral). La última actualización de los datos corresponde al trimestre Marzo - Abril - Mayo de 2026 (MAM 2026).
+
