@@ -1,11 +1,9 @@
 {
-  "hash": "18072b2f199961716547c40bb01409a7",
+  "hash": "5e864b23a65eac2991e544eb90997907",
   "result": {
     "engine": "knitr",
-    "markdown": "---\ntitle: \"About\"\n---\n\n\n\n\n\n\nAbout this site\n\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\n1 + 1\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n[1] 2\n```\n\n\n:::\n:::\n",
-    "supporting": [
-      "about_files"
-    ],
+    "markdown": "---\ntitle: \"Sobre el documento\"\n---\n\n\n\n\nEl presente documento consiste en un monitoreo mensual del empleo en el sector de las plataformas digitales de Chile, en base a la Encuesta Nacional de Empleo del Instituto Nacional de Estadísticas (INE). Esto, para el proyecto *Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales*, en cooperación con la Fundación Friedrich Ebert en Chile.\n\n\n\n\n::: {.cell layout-align=\"center\"}\n::: {.cell-output-display}\n![](logo.png){fig-align='center' width=95}\n:::\n:::\n\n\n\n\nTodos los datos son públicos y fueron descargados desde [el sitio web del INE](https://www.ine.gob.cl/estadisticas-por-tema/mercado-laboral). La última actualización de los datos corresponde al trimestre Abril - Mayo - Junio de 2026 (AMJ 2026).\n\n\n\n\n::: {.cell layout-align=\"center\"}\n::: {.cell-output-display}\n![](ine.jpg){fig-align='center' width=40%}\n:::\n:::\n",
+    "supporting": [],
     "filters": [
       "rmarkdown/pagebreak.lua"
     ],

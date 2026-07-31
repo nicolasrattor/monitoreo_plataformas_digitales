@@ -1,6 +1,6 @@
 ---
 title: "Monitoreo mensual del empleo de plataformas digitales"
-subtitle: "Proyecto < Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales >"
+subtitle: "Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales"
 author: "Nicolás Ratto"
 date: today
 format: 
@@ -43,8 +43,6 @@ editor: visual
 
 El presente documento consiste en un monitoreo mensual del empleo en el sector de las plataformas digitales de Chile, en base a la Encuesta Nacional de Empleo del Instituto Nacional de Estadísticas (INE). Esto, para el proyecto *Hacia una regulación laboral efectiva para los trabajadores de plataformas digitales*, en cooperación con la Fundación Friedrich Ebert en Chile.
 
-Todos los datos son públicos y fueron descargados desde [el sitio web del INE](https://www.ine.gob.cl/estadisticas-por-tema/mercado-laboral). La última actualización de los datos corresponde al trimestre Marzo - Abril - Mayo de 2026 (MAM 2026).
-
 ```{r warning=FALSE, message=FALSE, include=FALSE}
 
 options(scipen = 999)
@@ -60,6 +58,7 @@ library(magrittr)
 library(scales)
 library(knitr)
 library(arrow)
+library(tidyr)
 
 if (!dir.exists("output")) {
   dir.create("output")
@@ -80,7 +79,7 @@ if (!dir.exists("output/tablas")) {
 #| code-summary: "Ver código"
 
 ## Carga bases de datos
-ds <- open_dataset("../../../../../PROSPECTIVA SpA/ene_empleo_microdatos/output/data")
+ds <- open_dataset("../../../../../PROSPECTIVA SpA/ene_empleo_microdatos/0_procesamiento/output/data")
 
 ## Serie de plataformas
 pd <- ds %>% 
@@ -139,9 +138,7 @@ head(nombres_plataformas,10) %>% kable( col.names = c("Plataformas","Ocupados me
 
 ```
 
-Quienes declaran realizar su trabajo a través de una plataforma digital sumaron más de `r format(round(last(pd$plataformas)), big.mark = ".", scientific = FALSE)` personas el último trimestre móvil reportado por el INE. Las personas ocupadas que utilizan alguna de estas plataformas viene aumentando continuamente desde que existe registro, desde el año 2020. Respecto de hace una año, los ocupados de plataformas aumentaron en `r format(round(last(pd$plataformas))-round(last(lag(pd$plataformas,12))), big.mark = ".", scientific = FALSE)` personas. Una reciente noticia de El Mercurio hace referencia a este dato[^1].
-
-[^1]: Se adjunta enlace a publicación de Linkedin, que permite acceso libre: <https://www.linkedin.com/posts/economia-y-negocios-el-mercurio_empleo-proviene-de-las-redes-sociales-activity-7482399692006297600-aGB3?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAAB1sR9YB5hHhMBWKXcb76g4nr7wRjdwV7yI>
+Quienes declaran realizar su trabajo a través de una plataforma digital sumaron más de `r format(round(last(pd$plataformas)), big.mark = ".", scientific = FALSE)` personas el último trimestre móvil reportado por el INE. Las personas ocupadas que utilizan alguna de estas plataformas viene aumentando continuamente desde que existe registro, desde el año 2020. Respecto de hace una año, los ocupados de plataformas aumentaron en `r format(round(last(pd$plataformas))-round(last(lag(pd$plataformas,12))), big.mark = ".", scientific = FALSE)` personas.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -297,7 +294,7 @@ head(nombres_plataformas_para_filtrar,10) %>% kable(col.names = c("Plataformas",
 
 ```
 
-Más allá de la relevancia de seguir el empleo de quienes utilizan plataformas digitales, sin importar su tipo, podemos filtrar las empresas de plataformas digitales para quedarnos con un subconjunto de interés. En este caso, las plataformas reguladas por la Ley 21.431, como *Uber* o *PedidosYa*, que intermedian el trabajo georreferenciado. Para esto, quitamos a las plataformas de redes sociales, como *Instagram* y *Facebook*, así como a las plataformas de creación y difusión de contenido, como *Youtube* y *OnlyFans*. En el último trimestre registrado, estos trabajadores alcanzaron las `r format(round(last(pd_ley21431$ocupados)), big.mark = ".", scientific = FALSE)` personas (solo considerando quienes se ocupan en plataformas digitales reguladas por la Ley 21.431 como primera ocupación). En el último año, estos trabajaron disminuyeron en `r format(round(last(pd_ley21431$ocupados))-round(last(lag(pd_ley21431$ocupados,12))), big.mark = ".", scientific = FALSE)` personas.
+Más allá de la relevancia de seguir el empleo de quienes utilizan plataformas digitales, sin importar su tipo, podemos filtrar las empresas de plataformas digitales para quedarnos con un subconjunto de interés. En este caso, las plataformas reguladas por la Ley 21.431, como *Uber* o *PedidosYa*, que intermedian el trabajo georreferenciado. Para esto, quitamos a las plataformas de redes sociales, como *Instagram* y *Facebook*, así como a las plataformas de creación y difusión de contenido, como *Youtube* y *OnlyFans*. En el último trimestre registrado, estos trabajadores alcanzaron las `r format(round(last(pd_ley21431$ocupados)), big.mark = ".", scientific = FALSE)` personas (solo considerando quienes se ocupan en plataformas digitales reguladas por la Ley 21.431 como primera ocupación). En el último año, estos trabajaron aumentaron en `r format(round(last(pd_ley21431$ocupados))-round(last(lag(pd_ley21431$ocupados,12))), big.mark = ".", scientific = FALSE)` personas.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -342,8 +339,6 @@ ggsave(
 
 ```
 
-En el siguiente gráfico se puede comparar la evolución de la serie general de trabajadores de plataformas digitales (línea negra) y la serie particular de trabajadores de plataformas digitales regulados por la Ley 21.431 (línea roja), incluida en la primera serie general.
-
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
 #| code-summary: "Ver código"
@@ -376,7 +371,7 @@ pd_porcentajes <- pd_porcentajes %>% mutate(porcentaje=round(ocupados/ocupados_t
 
 ```
 
-No solo han aumentado en número, los trabajadores de plataformas digitales también han aumentado respecto del total de personas ocupadas. Los trabajadores de plataformas digitales pasaron de representar un 2,13% de los ocupados en 2022 a un 3,48% en 2025 y un 3,66% en lo que va de 2026. Los trabajadores de plataformas regulados por la Ley 21.431 pasaron de ser un 0,56% de los ocupados en 2022 a un 0,80% en 2025. En la última medida disponible representan un `r last(pd_porcentajes$porcentaje)`% de los ocupados.
+No solo han aumentado en número, los trabajadores de plataformas digitales también han aumentado respecto del total de personas ocupadas. Los trabajadores de plataformas digitales pasaron de representar un 1,93% de los ocupados en 2022 a un 2,94% en 2025 y un 3,89% en lo que va de 2026. Los trabajadores de plataformas regulados por la Ley 21.431 pasaron de ser un 0,55% de los ocupados en 2022 a un 0,80% en 2026. En la última medida disponible representan un `r last(pd_porcentajes$porcentaje)`% de los ocupados.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -432,7 +427,7 @@ ggsave(
 
 ### Sexo
 
-La distribución por sexo entre 2020 y 2026 evidencia una marcada masculinización de la fuerza laboral en plataformas digitales reguladas por la Ley 21.431: los hombres representan en promedio un 85,01% de los trabajadores, frente a un 14,99% de mujeres (@tbl-sexo).
+La distribución por sexo entre 2020 y 2026 evidencia una marcada masculinización de la fuerza laboral en plataformas digitales reguladas por la Ley 21.431: los hombres representan en promedio un 85,63% de los trabajadores, frente a un 14,37% de mujeres (@tbl-sexo).
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -489,7 +484,7 @@ formalidad <- formalidad %>% arrange(-desc(periodo))
 
 La informalidad en la primera ocupación de trabajadores de plataformas digitales muestra una tendencia decreciente con importantes fluctuaciones a lo largo del período (@fig-informalidad). Entre 2020 y 2021, la informalidad se mantuvo consistentemente alta, oscilando entre 70% y 89%, con su punto máximo en diciembre de 2021 (81,49%). A partir de 2022 comienza una leve tendencia a la baja, aunque con vaivenes trimestrales, manteniéndose mayormente entre 70% y 84%.
 
-El quiebre más marcado se observa desde mediados de 2024: la informalidad cae de niveles cercanos al 69% (enero 2024) a mínimos históricos de 56,29% (septiembre 2025), coincidiendo con la entrada en régimen de las resoluciones del Servicio de Impuestos Internos (SII) que hacen operativos algunos aspectos de la Ley 21.431. Este período (2024-2025) concentra la mayor parte de la reducción observada en toda la serie. Sin embargo, hacia el cierre de la serie disponible (abril 2026), se aprecia un repunte a `r last(formalidad$percent)`%, lo que sugiere que la formalización no ha sido un proceso lineal ni necesariamente consolidado, y amerita monitoreo continuo (véase la @tbl-informalidad).
+El quiebre más marcado se observa desde mediados de 2024: la informalidad cae de niveles cercanos al 69% (enero 2024) a mínimos históricos de 56,29% (septiembre 2025), coincidiendo con la entrada en régimen de las resoluciones del Servicio de Impuestos Internos (SII) que hacen operativos algunos aspectos de la Ley 21.431. Este período (2024-2025) concentra la mayor parte de la reducción observada en toda la serie. Sin embargo, hacia el cierre de la serie disponible se aprecia un repunte a `r last(formalidad$percent)`%, lo que sugiere que la formalización no ha sido un proceso lineal ni necesariamente consolidado, y amerita monitoreo continuo (véase la @tbl-informalidad).
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -551,7 +546,7 @@ formalidad %>%
 
 ### Región
 
-La distribución regional de trabajadores de plataformas digitales en los últimos 12 meses muestra una fuerte concentración metropolitana (Tabla 5): la Región Metropolitana concentra el 60,11% del total. Fuera de la RM, solo dos regiones superan el 5%: Valparaíso (8,79%) y Biobío (6,35%). Le sigue Coquimbo (4,83%). Un tercer grupo de regiones se ubica entre 2% y 3,6%: Maule (3,55%), Los Lagos (2,86%), La Araucanía (2,15%), Tarapacá (2,08%) y Antofagasta (2,04%). El resto de las regiones presenta participaciones marginales, todas bajo el 1,5%: Ñuble (1,18%), Los Ríos (1,17%), Arica y Parinacota (1,41%), O'Higgins (1,49%), Magallanes (0,95%), Atacama (0,93%) y Aysén (0,15%).
+La distribución regional de trabajadores de plataformas digitales en los últimos 12 meses muestra una fuerte concentración metropolitana (Tabla 5): la Región Metropolitana concentra el 58,85% del total. Fuera de la RM, solo dos regiones superan el 5%: Valparaíso (8,97%) y Biobío (6,48%). Le sigue Coquimbo (4,58%). Un tercer grupo de regiones se ubica entre 2% y 4%: Maule, Los Lago, La Araucanía, Tarapacá y Antofagasta. El resto de las regiones presenta participaciones marginales, todas bajo el 1,5%: Ñuble, Los Ríos Arica y Parinacota, O'Higgins, Magallanes, Atacama y Aysén.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -596,7 +591,7 @@ region %>% group_by(region) %>% summarise(percent=mean(percent)) %>%
 
 ### Nacionalidad
 
-La distribución por nacionalidad de trabajadores de plataformas digitales en el período 2025-2026 muestra que la nacionalidad chilena representa el 63,87% del total, seguida por Venezuela (25,23%) y Colombia (5,12%). Estas tres nacionalidades en conjunto representan el 94,22% de los trabajadores de plataformas digitales en el período analizado. Las otras nacionalidades no se presentan en @tbl-nacionalidad. En comparación con el período 2022-2023, la participación chilena aumentó de 58,71% a 63,87% y la colombiana aumentó de 3,69% a 5,12%, mientras que la participación venezolana disminuyó de 34,47% a 25,23%.
+La distribución por nacionalidad de trabajadores de plataformas digitales en el período 2025-2026 muestra que la nacionalidad chilena representa el 62,69% del total, seguida por Venezuela (26,32%) y Colombia (4,86%). Estas tres nacionalidades en conjunto representan el 93,87% de los trabajadores de plataformas digitales en el período analizado. Las otras nacionalidades no se presentan en @tbl-nacionalidad. En comparación con el período 2022-2023, la participación chilena aumentó más de tres puntos porcentuales, la colombiana aumentó menos de un punto y la participación venezolana disminuyó más de 7 puntos.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -649,11 +644,7 @@ merge(tab2022,tab2025,by="nacionalidad") %>% kable(col.names = c("nacionalidad",
 
 ### Edad
 
-La distribución por edad de trabajadores de plataformas digitales en los últimos 12 meses muestra una concentración en edades adultas jóvenes e intermedias (Tabla 7). El tramo de 30 a 34 años presenta la mayor participación (23,6%), seguido por 35 a 39 años (19,3%) y 25 a 29 años (14,1%). Estos tres tramos concentran en conjunto el 56,9% del total.
-
-Los tramos etarios extremos presentan las menores participaciones: 15 a 19 años (1,2%), 65 a 69 años (0,7%) y 70 años o más (1,2%). El tramo de 20 a 24 años registra un 5,2%.
-
-Considerando la distribución acumulada, el 63,4% de los trabajadores tiene entre 15 y 39 años, y el 89,0% tiene 54 años o menos.
+La distribución por edad de trabajadores de plataformas digitales en los últimos 12 meses muestra una concentración en edades adultas jóvenes e intermedias (Tabla 7). El tramo de 30 a 34 años presenta la mayor participación (23,9%), seguido por 35 a 39 años (19,4%) y 25 a 29 años (14,0%). Estos tres tramos concentran en conjunto el 57,3% del total. Considerando la distribución acumulada, el 64,1% de los trabajadores tiene entre 15 y 39 años.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -797,7 +788,7 @@ tab4<-plataformas_nov2025 %>%
 
 ```
 
-Considérese que solamente `r tab4[1,2]` casos presentaron información válida para hacer la estimación, por lo que los intervalos de confianza de los estadísitcos son especialmente amplios. En el caso de la media, estos van desde los \$`r format(pull(round(tab3[1,5])), big.mark = ".", scientific = FALSE)` a los \$`r format(pull(round(tab3[1,6])), big.mark = ".", scientific = FALSE)`, mientras que en el caso de la mediana van desde los \$`r format(pull(round(tab5[1,5])), big.mark = ".", scientific = FALSE)` a los \$`r format(pull(round(tab5[1,6])), big.mark = ".", scientific = FALSE)`. Así, solo la estimación de los ingresos promedio por hora de los trabajadores de plataformas es estadísticamente superior a la establecida por ley, no así los ingresos medianos.
+Considérese que solamente `r tab4[1,2]` casos presentaron información válida para hacer la estimación, por lo que los intervalos de confianza de los estadísitcos son especialmente amplios. En el caso de la media, estos van desde los \$`r format(pull(round(tab3[1,5])), big.mark = ".", scientific = FALSE)` a los \$`r format(pull(round(tab3[1,6])), big.mark = ".", scientific = FALSE)`, mientras que en el caso de la mediana van desde los \$`r format(pull(round(tab5[1,5])), big.mark = ".", scientific = FALSE)` a los \$`r format(pull(round(tab5[1,6])), big.mark = ".", scientific = FALSE)`. Así, las estimaciones de los ingresos promedio por hora de los trabajadores de plataformas no son estadísticamente superiores a los montos establecidos por ley.
 
 ```{r warning=FALSE, message=FALSE}
 #| code-fold: true
@@ -982,13 +973,13 @@ pd_ley21431 %>% tidyr::pivot_wider(names_from = tipo,values_from = ocupados) %>%
 
 # Empresas de plataformas reguladas por la Ley 21.431 con mayor crecimiento últimos 4 años
 
-La Tabla 10 muestra la evolución de ocupados por empresa de plataformas digitales entre abril de 2022 y abril de 2026, ordenada por variación porcentual. El objetivo es identificar prospectivamente empresas relevantes y emergentes que requieran especial atención, así como conocer el aumento o perdida de relevancia cuantitativa de las empresas más reconocidas.
+La Tabla 10 muestra la evolución de ocupados por empresa de plataformas digitales en los últimos 4 años, ordenada por variación porcentual. El objetivo es identificar prospectivamente empresas relevantes y emergentes que requieran especial atención, así como conocer el aumento o perdida de relevancia cuantitativa de las empresas más reconocidas.
 
-Un primer grupo de empresas registra crecimiento desde cero ocupados en 2022 a valores positivos en 2026, entre las que destacan BOOSMAP (1.145), PICKER UP (592), MERCADOLIBRE INSTAGRAM (533) y AMIDA (404), entre otras con valores menores.
+Un primer grupo de empresas registra crecimiento desde cero ocupados en 2022 a valores positivos en 2026, entre las que destacan FLEXIT (964), ZUBALE (431), BOOSMAP (414), PICKER UP (304), ENCUADRADO (413), JUMBO SHOPPERS (407) y VALDISHOPPER (389), entre otras con valores menores.
 
-Entre las empresas con presencia en ambos períodos, MERCADOLIBRE presenta la mayor variación porcentual positiva, pasando de 898 a 4.098 ocupados (+356,3%), seguida por DIDI (1.604 a 5.295; +230,1%), INDRIVER (947 a 2.504; +164,4%), UBER EATS (4.285 a 10.353; +141,6%), CABIFY (336 a 682; +103,0%), UBER (21.708 a 39.475; +81,8%) y DIDI UBER (200 a 307; +53,5%). En el otro extremo, PEDIDOS YA registra una caída de 4.497 a 4.203 ocupados (-6,5%) y RAPPI de 4.548 a 1.508 (-66,8%).
+Entre las empresas con presencia en ambos períodos, MERCADOLIBRE presenta la mayor variación porcentual positiva, pasando de 445 a 3.732 ocupados (+738%), seguida por DIDI y UBER EATS. En el otro extremo, Rappi, PedidosYa y Transvip reportan las principales caídas.
 
-Un grupo de empresas pasó de tener ocupados en 2022 a cero en 2026, con una variación de -100%: YAPO (188), BEAT (1.007), CORNERSHOP (7.131), SAWU (920), SHOPPER (458), TRANSVIP (795) y FOXER (2.641).
+Un grupo de empresas pasó de tener ocupados en 2022 a cero en 2026, con una variación de -100%: YAPO.CL, BEAT, CORNERSHOP, SAWU FIVER y FOXER.
 
 \newpage
 
@@ -998,24 +989,39 @@ Un grupo de empresas pasó de tener ocupados en 2022 a cero en 2026, con una var
 #| label: tbl-nuevas-plat
 #| tbl-cap: "Empresas de plataformas Ley 21431 con mayor crecimiento últimos 4 años"
 
+# 1) Último trimestre disponible en la base
+trim_ref <- ds %>% 
+  summarise(max_periodo = max(periodo, na.rm = TRUE)) %>% 
+  pull(max_periodo)
+
+# (opcional) asegurar clase Date si viene como character
+trim_ref <- as.Date(trim_ref)
+
+# 2) Trimestre base (4 años antes)
+trim_base <- trim_ref %m-% years(4)
+
+# 3) Pipeline
 nuevas <- ds %>% 
-  filter(periodo=="2026-04-01" | periodo=="2022-04-01" & 
-           plataformas_digitales == 1 ) %>% 
+  filter(periodo %in% c(trim_ref, trim_base),
+         plataformas_digitales == 1) %>% 
   filter(pd_especifique %in% nombres_plataformas_para_filtrar$pd_especifique) %>% 
-  group_by(periodo,pd_especifique) %>%
-  summarise(ocupados = sum(fact_cal, na.rm = TRUE)) %>%
-  collect()
+  group_by(periodo, pd_especifique) %>%
+  summarise(ocupados = sum(fact_cal, na.rm = TRUE), .groups = "drop") %>%
+  mutate(ocupados = round(ocupados)) %>% 
+  collect() %>% 
+  pivot_wider(names_from = periodo, values_from = ocupados, values_fill = 0)
 
-nuevas <- nuevas %>% 
-  mutate(ocupados=round(ocupados)) %>% 
-  tidyr::pivot_wider(names_from = periodo, values_from = ocupados,
-                         values_fill = 0) 
+# 4) Nombres dinámicos de columnas
+col_ref  <- as.character(trim_ref)
+col_base <- as.character(trim_base)
 
+# 5) Variación y orden
 nuevas %>%  
-  mutate(variacion_porc=round((`2026-04-01` - `2022-04-01`)/`2022-04-01`*100,1),
-         `2026-04-01`=round(`2026-04-01`),
-         `2022-04-01`=round(`2022-04-01`)) %>% 
-  arrange(-variacion_porc, -`2026-04-01`) %>% 
+  mutate(
+    variacion_porc = round((.data[[col_ref]] - .data[[col_base]]) / .data[[col_base]] * 100, 1)
+  ) %>% 
+  arrange(desc(variacion_porc), desc(.data[[col_ref]])) %>% 
   kable()
+
 
 ```
